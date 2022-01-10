@@ -91,7 +91,8 @@ def train():
             enable_running_stats(model)
             predictions = model(inputs)
             loss = smooth_crossentropy(predictions, targets, smoothing=label_smoothing)
-            loss.mean().backward()
+            with model.no_sync():
+                loss.mean().backward()
             optimizer.first_step(zero_grad=True)
 
             # second forward-backward step
