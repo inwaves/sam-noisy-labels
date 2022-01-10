@@ -23,8 +23,10 @@ weight_decay = 0.0005
 epochs = 200
 label_smoothing = 0.1
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 log = Log(log_each=10)
-model = Net()
+model = Net().to(device)
 base_optimizer = torch.optim.SGD
 optimizer = SAM(model.parameters(), base_optimizer, rho=rho, adaptive=adaptive, lr=lr, momentum=momentum,
                 weight_decay=weight_decay)
