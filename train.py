@@ -11,7 +11,7 @@ from cifar import Cifar
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # Constants.
-batch_size = 4
+batch_size = 128
 epochs = 10
 
 # Hyperparameters.
@@ -23,15 +23,55 @@ weight_decay = 0.0005
 epochs = 200
 label_smoothing = 0.1
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
 log = Log(log_each=10)
-model = Net().to(device)
+model = Net()
 base_optimizer = torch.optim.SGD
 optimizer = SAM(model.parameters(), base_optimizer, rho=rho, adaptive=adaptive, lr=lr, momentum=momentum,
                 weight_decay=weight_decay)
 scheduler = StepLR(optimizer, lr, epochs) # Learning rate scheduler.
 dataset = Cifar(batch_size, 0)
+
+
+def train_SGD():
+    for epoch in range(epochs):
+        # Set the model to training mode.
+        model.train()
+        log.train(len_dataset=len(dataset.train))
+
+        # For CIFAR-10 we expect images of size 3x32x32.
+
+        # Iterate over the batches in the training set.
+        for batch in dataset.train:
+            inputs, targets = (b.to(device) for b in batch)
+            optimizer.zero_grad()
+
+            # first forward-backward step
+            enable_running_stats(model)
+            predictions = model(inputs)
+            loss = smooth_crossentropy(predictions, targets, smoothing=label_smoothing)
+            loss.mean().backward()
+            optimizer.step()
+
+            with torch.no_grad():
+                correct = torch.argmax(predictions.data, 1) == targets
+                log(model, loss.cpu(), correct.cpu(), scheduler.lr())
+                scheduler(epoch)
+
+        # Set the model to eval mode.
+        model.eval()
+        log.eval(len_dataset=len(dataset.test))
+
+        # Begin testing the model on the test set.
+        with torch.no_grad():
+            for batch in dataset.test:
+                inputs, targets = (b.to(device) for b in batch)
+
+                predictions = model(inputs)
+                loss = smooth_crossentropy(predictions, targets)
+                correct = torch.argmax(predictions, 1) == targets
+                log(model, loss.cpu(), correct.cpu())
+
+        log.flush()
 
 
 def train():
@@ -83,5 +123,6 @@ def train():
 
 if __name__ == '__main__':
     train()
+    # train_SGD()
 
 
