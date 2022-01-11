@@ -2,6 +2,7 @@
   <dictionary name="inwaves">
     <words>
       <w>cifar</w>
+      <w>dataloaders</w>
       <w>hyperparameters</w>
     </words>
   </dictionary>

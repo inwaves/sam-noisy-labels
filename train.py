@@ -15,8 +15,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 sys.path.append("..")
 
 
-def setup(batch_size, threads, initial_rho, adaptive, momentum, weight_decay, lr, epochs):
-    dataset = CIFAR(batch_size, threads)
+def setup(batch_size, threads, initial_rho, adaptive, momentum, weight_decay, lr, epochs, label_type):
+    dataset = CIFAR(batch_size, label_type, threads)
     model = Net()
     base_optimizer = torch.optim.SGD
     optimiser = SAM(model.parameters(), base_optimizer, rho=initial_rho, adaptive=adaptive, lr=lr, momentum=momentum,
@@ -32,6 +32,7 @@ def setup(batch_size, threads, initial_rho, adaptive, momentum, weight_decay, lr
     return dataset, model, optimiser, log, scheduler, nb_scheduler
 
 
+# TODO: Add option to train with plain SGD.
 def train(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing):
     for epoch in range(epochs):
         # Set the model to training mode.
@@ -91,14 +92,17 @@ if __name__ == '__main__':
     parser.add_argument("--threads", default=2, type=int, help="Number of CPU threads for dataloaders.")
     parser.add_argument("--initial_rho", default=2.0, type=int, help="Rho parameter for SAM.")
     parser.add_argument("--weight_decay", default=0.0005, type=float, help="L2 weight decay.")
+    parser.add_argument("--label_type", default="clean", type=str, help="Type of CIFAR labels to use: clean, aggregate,"
+                                                                        " or worst.")
     args = parser.parse_args()
 
-    dataset, model, optimiser, log, scheduler, nb_scheduler = setup(args.batch_size,
-                                                                    args.threads,
-                                                                    args.initial_rho,
-                                                                    args.adaptive,
-                                                                    args.momentum,
-                                                                    args.weight_decay,
-                                                                    args.learning_rate,
-                                                                    args.epochs)
-    train(dataset, model, optimiser, log, scheduler, nb_scheduler, args.epochs, args.label_smoothing)
+    train_args = setup(args.batch_size,
+                       args.threads,
+                       args.initial_rho,
+                       args.adaptive,
+                       args.momentum,
+                       args.weight_decay,
+                       args.learning_rate,
+                       args.epochs,
+                       args.label_type)
+    train(*train_args, args.epochs, args.label_smoothing)
