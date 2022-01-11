@@ -4,7 +4,7 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 
-class Cifar:
+class CIFAR:
     def __init__(self, batch_size, threads):
         data_transforms = transforms.Compose(
             [transforms.ToTensor(),
@@ -17,3 +17,6 @@ class Cifar:
         self.test = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=threads)
 
         self.classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
+
+# TODO: Add support for CIFAR-100
+

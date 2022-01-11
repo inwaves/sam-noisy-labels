@@ -6,7 +6,7 @@ from utility.step_lr import StepLR
 from utility.bypass_bn import enable_running_stats, disable_running_stats
 from sam import SAM
 from net import Net
-from cifar import Cifar
+from cifar import CIFAR
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -29,7 +29,7 @@ log = Log(log_each=10)
 model = Net().to(device)
 optimizer = torch.optim.SGD(model.parameters(), lr=lr)
 scheduler = StepLR(optimizer, lr, epochs) # Learning rate scheduler.
-dataset = Cifar(batch_size, 0)
+dataset = CIFAR(batch_size, 0)
 
 
 if __name__ == '__main__':
