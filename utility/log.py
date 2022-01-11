@@ -3,11 +3,12 @@ import time
 
 
 class Log:
-    def __init__(self, log_each: int, initial_epoch=-1):
+    def __init__(self, file_writer, log_each: int, initial_epoch=-1):
         self.loading_bar = LoadingBar(length=27)
         self.best_accuracy = 0.0
         self.log_each = log_each
         self.epoch = initial_epoch
+        self.out = file_writer
 
     def train(self, len_dataset: int) -> None:
         self.epoch += 1
@@ -27,7 +28,7 @@ class Log:
 
     def __call__(self, model, loss, accuracy, learning_rate: float = None) -> None:
         if self.is_train:
-            self._train_step(model, loss, accuracy, learning_rate)
+            self._train_step(loss, accuracy, learning_rate)
         else:
             self._eval_step(loss, accuracy)
 
@@ -36,22 +37,27 @@ class Log:
             loss = self.epoch_state["loss"] / self.epoch_state["steps"]
             accuracy = self.epoch_state["accuracy"] / self.epoch_state["steps"]
 
+            output = f"\r┃{self.epoch:12d}  ┃{loss:12.4f}  │{100*accuracy:10.2f} %  ┃{self.learning_rate:12.3e}  │{self._time():>12}  ┃"
             print(
-                f"\r┃{self.epoch:12d}  ┃{loss:12.4f}  │{100*accuracy:10.2f} %  ┃{self.learning_rate:12.3e}  │{self._time():>12}  ┃",
+                output,
                 end="",
                 flush=True,
             )
 
+            self.out.write(output)
+
         else:
             loss = self.epoch_state["loss"] / self.epoch_state["steps"]
             accuracy = self.epoch_state["accuracy"] / self.epoch_state["steps"]
+            output = f"{loss:12.4f}  │{100*accuracy:10.2f} %  ┃"
 
-            print(f"{loss:12.4f}  │{100*accuracy:10.2f} %  ┃", flush=True)
+            print(output, flush=True)
+            self.out.write(output + "\n")
 
             if accuracy > self.best_accuracy:
                 self.best_accuracy = accuracy
 
-    def _train_step(self, model, loss, accuracy, learning_rate: float) -> None:
+    def _train_step(self, loss, accuracy, learning_rate: float) -> None:
         self.learning_rate = learning_rate
         self.last_steps_state["loss"] += loss.sum().item()
         self.last_steps_state["accuracy"] += accuracy.sum().item()
@@ -68,8 +74,9 @@ class Log:
             self.last_steps_state = {"loss": 0.0, "accuracy": 0.0, "steps": 0}
             progress = self.step / self.len_dataset
 
+            output = f"\r┃{self.epoch:12d}  ┃{loss:12.4f}  │{100*accuracy:10.2f} %  ┃{learning_rate:12.3e}  │{self._time():>12}  {self.loading_bar(progress)}"
             print(
-                f"\r┃{self.epoch:12d}  ┃{loss:12.4f}  │{100*accuracy:10.2f} %  ┃{learning_rate:12.3e}  │{self._time():>12}  {self.loading_bar(progress)}",
+                output,
                 end="",
                 flush=True,
             )
@@ -90,7 +97,10 @@ class Log:
         return f"{time_seconds // 60:02d}:{time_seconds % 60:02d} min"
 
     def _print_header(self) -> None:
-        print(f"┏━━━━━━━━━━━━━━┳━━━━━━━╸T╺╸R╺╸A╺╸I╺╸N╺━━━━━━━┳━━━━━━━╸S╺╸T╺╸A╺╸T╺╸S╺━━━━━━━┳━━━━━━━╸V╺╸A╺╸L╺╸I╺╸D╺━━━━━━━┓")
-        print(f"┃              ┃              ╷              ┃              ╷              ┃              ╷              ┃")
-        print(f"┃       epoch  ┃        loss  │    accuracy  ┃        l.r.  │     elapsed  ┃        loss  │    accuracy  ┃")
-        print(f"┠──────────────╂──────────────┼──────────────╂──────────────┼──────────────╂──────────────┼──────────────┨")
+        output = """┏━━━━━━━━━━━━━━┳━━━━━━━╸T╺╸R╺╸A╺╸I╺╸N╺━━━━━━━┳━━━━━━━╸S╺╸T╺╸A╺╸T╺╸S╺━━━━━━━┳━━━━━━━╸V╺╸A╺╸L╺╸I╺╸D╺━━━━━━━┓
+┃              ┃              ╷              ┃              ╷              ┃              ╷              ┃
+┃       epoch  ┃        loss  │    accuracy  ┃        l.r.  │     elapsed  ┃        loss  │    accuracy  ┃
+┠──────────────╂──────────────┼──────────────╂──────────────┼──────────────╂──────────────┼──────────────┨"""
+
+        print(output)
+        self.out.write(output + "\n")
