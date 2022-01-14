@@ -2,6 +2,7 @@
   <dictionary name="inwaves">
     <words>
       <w>cifar</w>
+      <w>crossentropy</w>
       <w>dataloaders</w>
       <w>hyperparameters</w>
     </words>
