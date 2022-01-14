@@ -45,7 +45,6 @@ def train(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label
         # Iterate over the batches in the training set.
         for batch in dataset.train:
             inputs, targets = (b.to(device) for b in batch)
-            # print(inputs.shape)
 
             # First forward-backward step: finds the adversarial point.
             enable_running_stats(model)
