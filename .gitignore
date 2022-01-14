@@ -1,4 +1,6 @@
-data/
+data/cifar-10-batches-py/
+data/cifar-100-python/
+*.tar.gz
 **.pyc
 .DS_STORE
 

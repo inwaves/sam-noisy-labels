@@ -2,15 +2,15 @@ import argparse
 import sys
 import torch
 
-from smooth_cross_entropy import smooth_crossentropy
+from loss.smooth_cross_entropy import smooth_crossentropy
 from utility.log import Log
 from utility.neighbourhood_scheduler import NeighbourhoodScheduler
 from utility.step_lr import StepLR
 from utility.bypass_bn import enable_running_stats, disable_running_stats
-from sam import SAM
-from cifar10net import Cifar10Net
-from cifar100net import Cifar100Net
-from cifar import CIFAR
+from optimiser.sam import SAM
+from models.cifar10net import Cifar10Net
+from models.cifar100net import Cifar100Net
+from data.cifar import CIFAR
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 sys.path.append("..")
