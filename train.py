@@ -15,20 +15,23 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 sys.path.append("..")
 
 
-def setup(batch_size, threads, initial_rho, adaptive, momentum, weight_decay, lr, epochs, label_type):
-    """Initialises dataset, model, optimiser, schedulers and log."""
-
-    dataset = CIFAR(batch_size, label_type, threads)
-    model = Net().to(device)
+def setup(source_dataset, batch_size, label_type, threads, learning_rate, initial_rho, adaptive, momentum, weight_decay, epochs):
+    dataset = CIFAR(source_dataset, batch_size, label_type, threads)
+    model = Net()
     base_optimizer = torch.optim.SGD
-    optimiser = SAM(model.parameters(), base_optimizer, rho=initial_rho, adaptive=adaptive, lr=lr, momentum=momentum,
+    optimiser = SAM(model.parameters(),
+                    base_optimizer,
+                    rho=initial_rho,
+                    adaptive=adaptive,
+                    lr=learning_rate,
+                    momentum=momentum,
                     weight_decay=weight_decay)
 
     f = open("log.txt", "w")
     log = Log(log_each=10, file_writer=f)
 
     # Schedulers.
-    scheduler = StepLR(optimiser, lr, epochs)  # Learning rate scheduler.
+    scheduler = StepLR(optimiser, learning_rate, epochs)  # Learning rate scheduler.
     nb_scheduler = NeighbourhoodScheduler(initial_rho, epochs, optimiser)
 
     return dataset, model, optimiser, log, scheduler, nb_scheduler
@@ -37,6 +40,7 @@ def setup(batch_size, threads, initial_rho, adaptive, momentum, weight_decay, lr
 # TODO: Add option to train with plain SGD.
 def train(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing):
     """Trains model using sharpness-aware minimisation (SAM)."""
+
     for epoch in range(epochs):
         # Set the model to training mode.
         model.train()
@@ -92,6 +96,7 @@ if __name__ == '__main__':
     # Start by parsing CLI arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("--adaptive", default=False, type=bool, help="True if you want to use the Adaptive SAM.")
+    parser.add_argument("--dataset", default="cifar10", type=str, help="Select from cifar10 or cifar100.")
     parser.add_argument("--batch_size", default=128, type=int,
                         help="Batch size used in the training and validation loop.")
     parser.add_argument("--epochs", default=10, type=int, help="Total number of epochs.")
@@ -106,16 +111,7 @@ if __name__ == '__main__':
                                                                         " or worst.")
     args = parser.parse_args()
 
-    # Use CLI args to initialise arguments for the training process.
-    train_args = setup(args.batch_size,
-                       args.threads,
-                       args.initial_rho,
-                       args.adaptive,
-                       args.momentum,
-                       args.weight_decay,
-                       args.learning_rate,
-                       args.epochs,
-                       args.label_type)
+    training_params = setup(args.dataset, args.batch_size, args.label_type, args.threads, args.learning_rate, args.initial_rho,
+                            args.adaptive, args.momentum, args.weight_decay, args.epochs)
 
-    # Train model.
-    train(*train_args, args.epochs, args.label_smoothing)
+    train(*training_params, args.epochs, args.label_smoothing)
