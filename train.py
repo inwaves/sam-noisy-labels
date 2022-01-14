@@ -16,6 +16,8 @@ sys.path.append("..")
 
 
 def setup(batch_size, threads, initial_rho, adaptive, momentum, weight_decay, lr, epochs, label_type):
+    """Initialises dataset, model, optimiser, schedulers and log."""
+
     dataset = CIFAR(batch_size, label_type, threads)
     model = Net()
     base_optimizer = torch.optim.SGD
@@ -34,6 +36,7 @@ def setup(batch_size, threads, initial_rho, adaptive, momentum, weight_decay, lr
 
 # TODO: Add option to train with plain SGD.
 def train(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing):
+    """Trains model using sharpness-aware minimisation (SAM)."""
     for epoch in range(epochs):
         # Set the model to training mode.
         model.train()
@@ -44,24 +47,30 @@ def train(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label
             inputs, targets = (b.to(device) for b in batch)
             # print(inputs.shape)
 
-            # first forward-backward step
+            # First forward-backward step: finds the adversarial point.
             enable_running_stats(model)
             predictions = model(inputs)
             loss = smooth_crossentropy(predictions, targets, smoothing=label_smoothing)
             loss.mean().backward()
             optimiser.first_step(zero_grad=True)
 
-            # second forward-backward step
+            # Second forward-backward step: using gradient value at the adversarial point,
+            # update the weights at the current point.
             disable_running_stats(model)
             smooth_crossentropy(model(inputs), targets, smoothing=label_smoothing).mean().backward()
             optimiser.second_step(zero_grad=True)
 
+            # Calculate the accuracy, log the results, and apply the learning
+            # rate scheduler and the neighbourhood radius scheduler.
             with torch.no_grad():
                 correct = torch.argmax(predictions.data, 1) == targets
                 log(model, loss.cpu(), correct.cpu(), scheduler.lr())
                 scheduler(epoch)
                 nb_scheduler(epoch)
 
+        #####################
+        # TRAINING COMPLETE #
+        #####################
         # Set the model to eval mode.
         model.eval()
         log.eval(len_dataset=len(dataset.test))
@@ -76,10 +85,12 @@ def train(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label
                 correct = torch.argmax(predictions, 1) == targets
                 log(model, loss.cpu(), correct.cpu())
 
+        # Write to log the final statistics.
         log.flush()
 
 
 if __name__ == '__main__':
+    # Start by parsing CLI arguments.
     parser = argparse.ArgumentParser()
     parser.add_argument("--adaptive", default=False, type=bool, help="True if you want to use the Adaptive SAM.")
     parser.add_argument("--batch_size", default=128, type=int,
@@ -96,6 +107,7 @@ if __name__ == '__main__':
                                                                         " or worst.")
     args = parser.parse_args()
 
+    # Use CLI args to initialise arguments for the training process.
     train_args = setup(args.batch_size,
                        args.threads,
                        args.initial_rho,
@@ -105,4 +117,6 @@ if __name__ == '__main__':
                        args.learning_rate,
                        args.epochs,
                        args.label_type)
+
+    # Train model.
     train(*train_args, args.epochs, args.label_smoothing)
