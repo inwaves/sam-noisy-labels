@@ -94,13 +94,13 @@ if __name__ == '__main__':
     parser.add_argument("--adaptive", default=False, type=bool, help="True if you want to use the Adaptive SAM.")
     parser.add_argument("--batch_size", default=128, type=int,
                         help="Batch size used in the training and validation loop.")
-    parser.add_argument("--epochs", default=200, type=int, help="Total number of epochs.")
+    parser.add_argument("--epochs", default=10, type=int, help="Total number of epochs.")
     parser.add_argument("--label_smoothing", default=0.1, type=float, help="Use 0.0 for no label smoothing.")
     parser.add_argument("--learning_rate", default=0.1, type=float,
                         help="Base learning rate at the start of the training.")
     parser.add_argument("--momentum", default=0.9, type=float, help="SGD Momentum.")
     parser.add_argument("--threads", default=2, type=int, help="Number of CPU threads for dataloaders.")
-    parser.add_argument("--initial_rho", default=2.0, type=int, help="Rho parameter for SAM.")
+    parser.add_argument("--initial_rho", default=2.0, type=float, help="Rho parameter for SAM.")
     parser.add_argument("--weight_decay", default=0.0005, type=float, help="L2 weight decay.")
     parser.add_argument("--label_type", default="clean", type=str, help="Type of CIFAR labels to use: clean, aggregate,"
                                                                         " or worst.")
