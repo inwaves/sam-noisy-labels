@@ -19,7 +19,7 @@ def setup(batch_size, threads, initial_rho, adaptive, momentum, weight_decay, lr
     """Initialises dataset, model, optimiser, schedulers and log."""
 
     dataset = CIFAR(batch_size, label_type, threads)
-    model = Net()
+    model = Net().to(device)
     base_optimizer = torch.optim.SGD
     optimiser = SAM(model.parameters(), base_optimizer, rho=initial_rho, adaptive=adaptive, lr=lr, momentum=momentum,
                     weight_decay=weight_decay)
