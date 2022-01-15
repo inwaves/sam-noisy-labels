@@ -12,7 +12,7 @@ class NeighbourhoodScheduler:
         elif epoch < 2 * self.total_epochs // 3:
             rho = self.rho * 0.1    # What should this be?
         else:
-            rho = self.rho * 0.01 ** 2
+            rho = self.rho * 0.01
 
         for param_group in self.optimiser.param_groups:
             param_group["rho"] = rho

@@ -88,6 +88,9 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
                 correct = torch.argmax(predictions, 1) == targets
                 log(model, loss.cpu(), correct.cpu())
 
+        # Write final statistics.
+        log.flush()
+
 
 def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing):
     """Trains model using sharpness-aware minimisation (SAM)."""
