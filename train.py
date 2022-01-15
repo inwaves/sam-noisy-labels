@@ -1,6 +1,7 @@
 import argparse
 import sys
 import torch
+from torchvision.models import resnet34
 
 from loss.smooth_cross_entropy import smooth_crossentropy
 from utility.log import Log
@@ -21,7 +22,8 @@ def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, lea
     """ Sets up the training process. """
     dataset = CIFAR(source_dataset, batch_size, label_type, threads)
 
-    model = Cifar10Net() if source_dataset == "cifar10" else Cifar100Net()
+    model = resnet34(pretrained=False)
+    model.fc = torch.nn.Linear(512, len(dataset.classes), bias=True)
 
     if optimiser_choice == "SAM":
         base_optimiser = torch.optim.SGD
