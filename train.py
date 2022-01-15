@@ -20,8 +20,7 @@ def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, lea
     """ Sets up the training process. """
     dataset = CIFAR(source_dataset, batch_size, label_type, threads)
 
-    model = resnet.resnet32()
-    model.fc = torch.nn.Linear(512, len(dataset.classes), bias=True)
+    model = resnet.resnet32().to(device)
 
     if optimiser_choice == "SAM":
         base_optimiser = torch.optim.SGD
