@@ -1,7 +1,6 @@
 import argparse
 import sys
 import torch
-from torchvision.models import resnet34
 
 from loss.smooth_cross_entropy import smooth_crossentropy
 from utility.log import Log
@@ -9,9 +8,8 @@ from utility.neighbourhood_scheduler import NeighbourhoodScheduler
 from utility.step_lr import StepLR
 from utility.bypass_bn import enable_running_stats, disable_running_stats
 from optimiser.sam import SAM
-from models.cifar10net import Cifar10Net
-from models.cifar100net import Cifar100Net
 from data.cifar import CIFAR
+import models.resnet as resnet
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 sys.path.append("..")
@@ -22,7 +20,7 @@ def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, lea
     """ Sets up the training process. """
     dataset = CIFAR(source_dataset, batch_size, label_type, threads)
 
-    model = resnet34(pretrained=False)
+    model = resnet.resnet32()
     model.fc = torch.nn.Linear(512, len(dataset.classes), bias=True)
 
     if optimiser_choice == "SAM":
