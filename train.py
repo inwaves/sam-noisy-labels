@@ -16,14 +16,14 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 sys.path.append("..")
 
 
-def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, learning_rate,
+def setup(source_dataset, batch_size, label_type, threads, optimiser, learning_rate,
           momentum, weight_decay, initial_rho, adaptive, rho_scheduler, k, epochs):
     """ Sets up the training process. """
     dataset = CIFAR(source_dataset, batch_size, label_type, threads)
 
     model = resnet.resnet32().to(device)
 
-    if optimiser_choice == "SAM":
+    if optimiser == "SAM":
         base_optimiser = torch.optim.SGD
         optimiser = SAM(model.parameters(),
                         base_optimiser,
@@ -235,12 +235,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     training_params = setup(args.dataset, args.batch_size, args.label_type, args.threads,  # Dataset arguments.
-                            args.optimiser_choice, args.learning_rate, args.momentum, args.weight_decay,  # Optimiser.
+                            args.optimiser, args.learning_rate, args.momentum, args.weight_decay,  # Optimiser.
                             args.initial_rho, args.adaptive, args.rho_scheduler, args.k,  # SAM-specific arguments.
                             args.epochs)  # Training arguments.
 
     # Run the training loop.
-    if args.optimiser_choice == "SAM":
+    if args.optimiser == "SAM":
         train_sam(*training_params, args.epochs, args.label_smoothing, args.bootstrapped)
     else:
         train_sgd(*training_params, args.epochs, args.label_smoothing, args.bootstrapped)
