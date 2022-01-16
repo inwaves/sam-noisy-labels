@@ -98,10 +98,11 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         # TRAINING COMPLETE #
         #####################
         # Save predictions for bootstrapping.
-        if not bootstrapped:
-            for batch in dataset.train:
-                inputs, _ = (b.to(device) for b in batch)
-                all_predictions.append(model(inputs))
+        with torch.no_grad():
+            if not bootstrapped:
+                for batch in dataset.train:
+                    inputs, _ = (b.to(device) for b in batch)
+                    all_predictions.append(model(inputs))
 
         # Set the model to eval mode.
         model.eval()
