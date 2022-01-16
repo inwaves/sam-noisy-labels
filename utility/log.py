@@ -104,3 +104,6 @@ class Log:
 
         print(output)
         self.out.write(output + "\n")
+
+    def writeline(self, line: str) -> None:
+        self.out.write(line + "\n")

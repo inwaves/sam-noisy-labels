@@ -58,6 +58,7 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
 
     bootstrapped_targets, all_predictions = [], []
     if bootstrapped:
+        log.writeline(f"Bootstrapping an SGD run.")
         bootstrapped_targets = train_sgd(dataset=dataset,
                                          model=model,
                                          optimiser=optimiser,
@@ -127,6 +128,7 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
 
     bootstrapped_targets, all_predictions = [], []
     if bootstrapped:
+        log.writeline(f"Bootstrapping a SAM run.")
         bootstrapped_targets = train_sam(dataset=dataset,
                                          model=model,
                                          optimiser=optimiser,
@@ -198,6 +200,10 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         return None
 
 
+def train_swa():
+    pass
+
+
 if __name__ == '__main__':
     # Start by parsing CLI arguments.
     parser = argparse.ArgumentParser()
@@ -221,7 +227,7 @@ if __name__ == '__main__':
     parser.add_argument("--noise_level", default=0.2, type=float,
                         help="When label type is 'blue', each label is flipped with probability equal to this "
                              "parameter.")
-    parser.add_argument("--optimiser-choice", default="SAM", type=str, help="Select from SAM or SGD.")
+    parser.add_argument("--optimiser", default="SAM", type=str, help="Select from SAM or SGD.")
     parser.add_argument("--rho_scheduler", default=0.5, type=float,
                         help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease")
     parser.add_argument("--threads", default=2, type=int, help="Number of CPU threads for dataloaders.")
