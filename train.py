@@ -17,7 +17,7 @@ sys.path.append("..")
 
 
 def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, learning_rate,
-          momentum, weight_decay, initial_rho, adaptive, rho_scheduler, epochs):
+          momentum, weight_decay, initial_rho, adaptive, rho_scheduler, k, epochs):
     """ Sets up the training process. """
     dataset = CIFAR(source_dataset, batch_size, label_type, threads)
 
@@ -42,7 +42,7 @@ def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, lea
     scheduler = StepLR(optimiser, learning_rate, epochs)  # Learning rate scheduler.
 
     if rho_scheduler == "exponential":
-        nb_scheduler = ExponentialDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+        nb_scheduler = ExponentialDecayNeighbourhoodSchedule(initial_rho, epochs, k, optimiser)
     elif rho_scheduler == "stepdecay":
         nb_scheduler = StepDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
     elif rho_scheduler == "stepincrease":
@@ -53,16 +53,29 @@ def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, lea
     return dataset, model, optimiser, log, scheduler, nb_scheduler
 
 
-def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing):
+def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing, bootstrapped):
     """Trains model using stochastic gradient descent."""
+
+    bootstrapped_targets, all_predictions = [], []
+    if bootstrapped:
+        bootstrapped_targets = train_sgd(dataset=dataset,
+                                         model=model,
+                                         optimiser=optimiser,
+                                         log=log,
+                                         scheduler=scheduler,
+                                         nb_scheduler=nb_scheduler,
+                                         epochs=epochs,
+                                         label_smoothing=label_smoothing,
+                                         bootstrapped=False)
 
     for epoch in range(epochs):
         model.train()
         log.train(len_dataset=len(dataset.train))
 
         # Iterate over training set.
-        for batch in dataset.train:
+        for ind, batch in enumerate(dataset.train):
             inputs, targets = (b.to(device) for b in batch)
+            targets = bootstrapped_targets[ind] if bootstrapped else targets
 
             enable_running_stats(model)
             predictions = model(inputs)
@@ -83,6 +96,10 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         #####################
         # TRAINING COMPLETE #
         #####################
+        # Save predictions for bootstrapping.
+        if not bootstrapped:
+            all_predictions = [model(inputs) for (inputs, _) in dataset.train]
+
         # Set the model to eval mode.
         model.eval()
         log.eval(len_dataset=len(dataset.test))
@@ -100,9 +117,25 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         # Write final statistics.
         log.flush()
 
+        if bootstrapped:
+            return all_predictions
+        return None
 
-def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing):
+
+def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing, bootstrapped):
     """Trains model using sharpness-aware minimisation (SAM)."""
+
+    bootstrapped_targets, all_predictions = [], []
+    if bootstrapped:
+        bootstrapped_targets = train_sam(dataset=dataset,
+                                         model=model,
+                                         optimiser=optimiser,
+                                         log=log,
+                                         scheduler=scheduler,
+                                         nb_scheduler=nb_scheduler,
+                                         epochs=epochs,
+                                         label_smoothing=label_smoothing,
+                                         bootstrapped=False)
 
     for epoch in range(epochs):
         # Set the model to training mode.
@@ -110,8 +143,10 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         log.train(len_dataset=len(dataset.train))
 
         # Iterate over the batches in the training set.
-        for batch in dataset.train:
+        for ind, batch in enumerate(dataset.train):
+            # Inputs is shape (batch_size, 3, 32, 32). Targets is shape (batch_size,).
             inputs, targets = (b.to(device) for b in batch)
+            targets = bootstrapped_targets[ind] if bootstrapped else targets
 
             # First forward-backward step: finds the adversarial point.
             enable_running_stats(model)
@@ -137,6 +172,10 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         #####################
         # TRAINING COMPLETE #
         #####################
+        # Save predictions for bootstrapping.
+        if not bootstrapped:
+            all_predictions = [model(inputs) for (inputs, _) in dataset.train]
+
         # Set the model to eval mode.
         model.eval()
         log.eval(len_dataset=len(dataset.test))
@@ -154,6 +193,10 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         # Write to log the final statistics.
         log.flush()
 
+        if not bootstrapped:
+            return all_predictions
+        return None
+
 
 if __name__ == '__main__':
     # Start by parsing CLI arguments.
@@ -161,29 +204,37 @@ if __name__ == '__main__':
     parser.add_argument("--adaptive", default=False, type=bool, help="True if you want to use the Adaptive SAM.")
     parser.add_argument("--batch_size", default=128, type=int,
                         help="Batch size used in the training and validation loop.")
+    parser.add_argument("--bootstrapped", default=False, type=bool,
+                        help="Run bootstrapped training: train once on the original labels, then again on the "
+                             "predicted labels from the first run.")
     parser.add_argument("--dataset", default="cifar10", type=str, help="Select from cifar10 or cifar100.")
     parser.add_argument("--epochs", default=10, type=int, help="Total number of epochs.")
     parser.add_argument("--initial_rho", default=0.5, type=float, help="Rho parameter for SAM.")
-    parser.add_argument("--rho_scheduler", default=0.5, type=float,
-                        help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease")
+    parser.add_argument("--k", default=0.1, type=float,
+                        help="Parameter for the exponential decay schedule for ρ.")
     parser.add_argument("--label_smoothing", default=0.1, type=float, help="Use 0.0 for no label smoothing.")
     parser.add_argument("--label_type", default="clean", type=str, help="Type of CIFAR labels to use: clean, aggregate,"
                                                                         " or worse.")
     parser.add_argument("--learning_rate", default=0.1, type=float,
                         help="Base learning rate at the start of the training.")
     parser.add_argument("--momentum", default=0.9, type=float, help="SGD Momentum.")
+    parser.add_argument("--noise_level", default=0.2, type=float,
+                        help="When label type is 'blue', each label is flipped with probability equal to this "
+                             "parameter.")
     parser.add_argument("--optimiser-choice", default="SAM", type=str, help="Select from SAM or SGD.")
+    parser.add_argument("--rho_scheduler", default=0.5, type=float,
+                        help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease")
     parser.add_argument("--threads", default=2, type=int, help="Number of CPU threads for dataloaders.")
     parser.add_argument("--weight_decay", default=0.0005, type=float, help="L2 weight decay.")
     args = parser.parse_args()
 
     training_params = setup(args.dataset, args.batch_size, args.label_type, args.threads,  # Dataset arguments.
                             args.optimiser_choice, args.learning_rate, args.momentum, args.weight_decay,  # Optimiser.
-                            args.initial_rho, args.adaptive, args.rho_scheduler,  # SAM-specific arguments.
+                            args.initial_rho, args.adaptive, args.rho_scheduler, args.k,  # SAM-specific arguments.
                             args.epochs)  # Training arguments.
 
     # Run the training loop.
     if args.optimiser_choice == "SAM":
-        train_sam(*training_params, args.epochs, args.label_smoothing)
+        train_sam(*training_params, args.epochs, args.label_smoothing, args.bootstrapped)
     else:
-        train_sgd(*training_params, args.epochs, args.label_smoothing)
+        train_sgd(*training_params, args.epochs, args.label_smoothing, args.bootstrapped)
