@@ -80,6 +80,7 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
 
             enable_running_stats(model)
             predictions = model(inputs)
+            print(f"model(inputs) is type: {type(predictions)}, shape: {predictions.shape}")
             loss = smooth_crossentropy(predictions, targets, label_smoothing)
 
             loss.mean().backward()
