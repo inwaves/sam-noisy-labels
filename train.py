@@ -99,7 +99,9 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         #####################
         # Save predictions for bootstrapping.
         if not bootstrapped:
-            all_predictions = [model(inputs.to(device)) for (inputs, _) in dataset.train]
+            for batch in dataset.train:
+                inputs, _ = (b.to(device) for b in batch)
+                all_predictions.append(model(inputs))
 
         # Set the model to eval mode.
         model.eval()
@@ -176,7 +178,9 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         #####################
         # Save predictions for bootstrapping.
         if not bootstrapped:
-            all_predictions = [model(inputs.to(device)) for (inputs, _) in dataset.train]
+            for batch in dataset.train:
+                inputs, _ = (b.to(device) for b in batch)
+                all_predictions.append(model(inputs))
 
         # Set the model to eval mode.
         model.eval()
