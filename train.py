@@ -68,7 +68,7 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
                                          epochs=epochs,
                                          label_smoothing=label_smoothing,
                                          bootstrapped=False)
-        print(f"Type of bootstrapped_targets: {type(bootstrapped_targets)}, shape: {bootstrapped_targets.shape}")
+        print(f"Length: {len(bootstrapped_targets)}: first element: {bootstrapped_targets[0]}")
 
     for epoch in range(epochs):
         model.train()
