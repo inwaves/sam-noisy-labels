@@ -4,7 +4,8 @@ import torch
 
 from loss.smooth_cross_entropy import smooth_crossentropy
 from utility.log import Log
-from utility.neighbourhood_scheduler import NeighbourhoodScheduler
+from utility.neighbourhood_scheduler import ExponentialDecayNeighbourhoodSchedule, StepDecayNeighbourhoodSchedule, \
+    StepIncreaseNeighbourhoodSchedule, ConstantNeighbourhoodSchedule
 from utility.step_lr import StepLR
 from utility.bypass_bn import enable_running_stats, disable_running_stats
 from optimiser.sam import SAM
@@ -16,7 +17,7 @@ sys.path.append("..")
 
 
 def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, learning_rate,
-          momentum, weight_decay, initial_rho, adaptive, epochs):
+          momentum, weight_decay, initial_rho, adaptive, rho_scheduler, epochs):
     """ Sets up the training process. """
     dataset = CIFAR(source_dataset, batch_size, label_type, threads)
 
@@ -39,7 +40,15 @@ def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, lea
 
     # Schedulers.
     scheduler = StepLR(optimiser, learning_rate, epochs)  # Learning rate scheduler.
-    nb_scheduler = NeighbourhoodScheduler(initial_rho, epochs, optimiser)
+
+    if rho_scheduler == "exponential":
+        nb_scheduler = ExponentialDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+    elif rho_scheduler == "stepdecay":
+        nb_scheduler = StepDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+    elif rho_scheduler == "stepincrease":
+        nb_scheduler = StepIncreaseNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+    else:
+        nb_scheduler = ConstantNeighbourhoodSchedule(initial_rho, optimiser)
 
     return dataset, model, optimiser, log, scheduler, nb_scheduler
 
@@ -154,10 +163,12 @@ if __name__ == '__main__':
                         help="Batch size used in the training and validation loop.")
     parser.add_argument("--dataset", default="cifar10", type=str, help="Select from cifar10 or cifar100.")
     parser.add_argument("--epochs", default=10, type=int, help="Total number of epochs.")
-    parser.add_argument("--initial_rho", default=2.0, type=float, help="Rho parameter for SAM.")
+    parser.add_argument("--initial_rho", default=0.5, type=float, help="Rho parameter for SAM.")
+    parser.add_argument("--rho_scheduler", default=0.5, type=float,
+                        help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease")
     parser.add_argument("--label_smoothing", default=0.1, type=float, help="Use 0.0 for no label smoothing.")
     parser.add_argument("--label_type", default="clean", type=str, help="Type of CIFAR labels to use: clean, aggregate,"
-                                                                        " or worst.")
+                                                                        " or worse.")
     parser.add_argument("--learning_rate", default=0.1, type=float,
                         help="Base learning rate at the start of the training.")
     parser.add_argument("--momentum", default=0.9, type=float, help="SGD Momentum.")
@@ -168,7 +179,7 @@ if __name__ == '__main__':
 
     training_params = setup(args.dataset, args.batch_size, args.label_type, args.threads,  # Dataset arguments.
                             args.optimiser_choice, args.learning_rate, args.momentum, args.weight_decay,  # Optimiser.
-                            args.initial_rho, args.adaptive,  # SAM-specific arguments.
+                            args.initial_rho, args.adaptive, args.rho_scheduler,  # SAM-specific arguments.
                             args.epochs)  # Training arguments.
 
     # Run the training loop.
