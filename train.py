@@ -122,8 +122,8 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         log.flush()
 
         if bootstrapped:
-            return all_predictions
-        return None
+            return None
+        return all_predictions
 
 
 def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing, bootstrapped):
@@ -200,9 +200,9 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         # Write to log the final statistics.
         log.flush()
 
-        if not bootstrapped:
-            return all_predictions
-        return None
+        if bootstrapped:
+            return None
+        return all_predictions
 
 
 def train_swa():
