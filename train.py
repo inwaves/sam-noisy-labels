@@ -68,7 +68,6 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
                                          epochs=epochs,
                                          label_smoothing=label_smoothing,
                                          bootstrapped=False)
-        print(f"Length: {len(bootstrapped_targets)}: first element: {bootstrapped_targets[0]}")
 
     for epoch in range(epochs):
         model.train()
@@ -103,6 +102,9 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
             if not bootstrapped:
                 for batch in dataset.train:
                     inputs, _ = (b.to(device) for b in batch)
+
+                    # Argmax is needed because the original targets are labels,
+                    # whereas the output here is in 10-/100-class softmax form.
                     all_predictions.append(torch.argmax(model(inputs), 1))
 
         # Set the model to eval mode.
@@ -179,10 +181,14 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         # TRAINING COMPLETE #
         #####################
         # Save predictions for bootstrapping.
-        if not bootstrapped:
-            for batch in dataset.train:
-                inputs, _ = (b.to(device) for b in batch)
-                all_predictions.append(model(inputs))
+        with torch.no_grad():
+            if not bootstrapped:
+                for batch in dataset.train:
+                    inputs, _ = (b.to(device) for b in batch)
+
+                    # Argmax is needed because the original targets are labels,
+                    # whereas the output here is in 10-/100-class softmax form.
+                    all_predictions.append(torch.argmax(model(inputs), 1))
 
         # Set the model to eval mode.
         model.eval()
@@ -220,7 +226,7 @@ if __name__ == '__main__':
                         help="Run bootstrapped training: train once on the original labels, then again on the "
                              "predicted labels from the first run.")
     parser.add_argument("--dataset", default="cifar10", type=str, help="Select from cifar10 or cifar100.")
-    parser.add_argument("--epochs", default=10, type=int, help="Total number of epochs.")
+    parser.add_argument("--epochs", default=200, type=int, help="Total number of epochs.")
     parser.add_argument("--initial_rho", default=0.5, type=float, help="Rho parameter for SAM.")
     parser.add_argument("--k", default=0.1, type=float,
                         help="Parameter for the exponential decay schedule for ρ.")
