@@ -68,6 +68,7 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
                                          epochs=epochs,
                                          label_smoothing=label_smoothing,
                                          bootstrapped=False)
+        print(f"Type of bootstrapped_targets: {type(bootstrapped_targets)}, shape: {bootstrapped_targets.shape}")
 
     for epoch in range(epochs):
         model.train()
@@ -80,7 +81,6 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
 
             enable_running_stats(model)
             predictions = model(inputs)
-            print(f"model(inputs) is type: {type(predictions)}, shape: {predictions.shape}")
             loss = smooth_crossentropy(predictions, targets, label_smoothing)
 
             loss.mean().backward()
