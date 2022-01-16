@@ -58,7 +58,7 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
 
     bootstrapped_targets, all_predictions = [], []
     if bootstrapped:
-        log.writeline(f"Bootstrapping an SGD run.")
+        print(f"Bootstrapping an SGD run.\n")
         bootstrapped_targets = train_sgd(dataset=dataset,
                                          model=model,
                                          optimiser=optimiser,
@@ -76,7 +76,7 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         # Iterate over training set.
         for ind, batch in enumerate(dataset.train):
             inputs, targets = (b.to(device) for b in batch)
-            targets = bootstrapped_targets[ind] if bootstrapped else targets
+            targets = bootstrapped_targets[ind].to(device) if bootstrapped else targets
 
             enable_running_stats(model)
             predictions = model(inputs)
@@ -148,7 +148,7 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         for ind, batch in enumerate(dataset.train):
             # Inputs is shape (batch_size, 3, 32, 32). Targets is shape (batch_size,).
             inputs, targets = (b.to(device) for b in batch)
-            targets = bootstrapped_targets[ind] if bootstrapped else targets
+            targets = bootstrapped_targets[ind].to(device) if bootstrapped else targets
 
             # First forward-backward step: finds the adversarial point.
             enable_running_stats(model)
