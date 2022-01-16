@@ -78,7 +78,7 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
         for ind, batch in enumerate(dataset.train):
             inputs, targets = (b.to(device) for b in batch)
             targets = bootstrapped_targets[ind].to(device) if bootstrapped else targets
-            print(f"This is a target: {targets[0]}")
+            print(f"This is targets: {targets}")
 
             enable_running_stats(model)
             predictions = model(inputs)
