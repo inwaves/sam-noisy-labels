@@ -60,7 +60,7 @@ def get_cifar10(label_type, noise, data_transforms):
         # Load whichever type of red noise labels the user specified: clean, aggre, worse.
         labels = torch.load("./data/CIFAR-10_human.pt")[f"{label_type}_label"]
     else:
-        labels = apply_label_noise(labels=torch.load("./data/CIFAR-100_human.pt")["clean_label"],
+        labels = apply_label_noise(labels=torch.load("./data/CIFAR-10_human.pt")["clean_label"],
                                    noise=noise,
                                    num_classes=10)
 
