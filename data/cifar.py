@@ -16,7 +16,7 @@ def apply_label_noise(labels, noise, num_classes):
 
     # For the labels where flip_label is True, replace the labels with random_labels.
     labels[flip_label] = random_labels
-
+    print(f"Flipped labels: {labels}")
     return labels
 
 
