@@ -5,6 +5,8 @@
       <w>crossentropy</w>
       <w>dataloaders</w>
       <w>hyperparameters</w>
+      <w>stepdecay</w>
+      <w>stepincrease</w>
     </words>
   </dictionary>
 </component>

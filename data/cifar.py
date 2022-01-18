@@ -88,6 +88,6 @@ class CIFAR:
         for i in range(len(train_set)):
             new_training_set.append((train_set[i][0], labels[i]))
 
-        self.train = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=threads)
+        self.train = torch.utils.data.DataLoader(new_training_set, batch_size=batch_size, shuffle=True, num_workers=threads)
         self.test = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=threads)
         self.classes = classes

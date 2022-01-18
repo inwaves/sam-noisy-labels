@@ -17,7 +17,7 @@ sys.path.append("..")
 
 
 def setup(source_dataset, noise, batch_size, label_type, threads, optimiser_choice, learning_rate,
-          momentum, weight_decay, initial_rho, adaptive, rho_scheduler, epochs):
+          momentum, weight_decay, initial_rho, adaptive, rho_schedule_type, epochs):
     """ Sets up the training process. """
     dataset = CIFAR(source_dataset, batch_size, label_type, noise, threads)
 
@@ -43,16 +43,16 @@ def setup(source_dataset, noise, batch_size, label_type, threads, optimiser_choi
     # Schedulers.
     scheduler = StepLR(optimiser, learning_rate, epochs)  # Learning rate scheduler.
 
-    if rho_scheduler == "exponential":
-        nb_scheduler = ExponentialDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
-    elif rho_scheduler == "stepdecay":
-        nb_scheduler = StepDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
-    elif rho_scheduler == "stepincrease":
-        nb_scheduler = StepIncreaseNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+    if rho_schedule_type == "exponential":
+        rho_schedule = ExponentialDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+    elif rho_schedule_type == "stepdecay":
+        rho_schedule = StepDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+    elif rho_schedule_type == "stepincrease":
+        rho_schedule = StepIncreaseNeighbourhoodSchedule(initial_rho, epochs, optimiser)
     else:
-        nb_scheduler = ConstantNeighbourhoodSchedule(initial_rho, optimiser)
+        rho_schedule = ConstantNeighbourhoodSchedule(initial_rho, optimiser)
 
-    return dataset, model, optimiser, log, scheduler, nb_scheduler
+    return dataset, model, optimiser, log, scheduler, rho_schedule
 
 
 def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing):
