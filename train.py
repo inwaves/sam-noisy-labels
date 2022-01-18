@@ -240,7 +240,7 @@ if __name__ == '__main__':
                         help="When label type is 'blue', each label is flipped with probability equal to this "
                              "parameter.")
     parser.add_argument("--optimiser", default="SAM", type=str, help="Select from SAM or SGD.")
-    parser.add_argument("--rho_scheduler", default=0.5, type=float,
+    parser.add_argument("--rho_scheduler", default="constant", type=str,
                         help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease")
     parser.add_argument("--threads", default=2, type=int, help="Number of CPU threads for dataloaders.")
     parser.add_argument("--weight_decay", default=0.0005, type=float, help="L2 weight decay.")
