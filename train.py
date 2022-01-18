@@ -16,22 +16,22 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 sys.path.append("..")
 
 
-def setup(source_dataset, batch_size, label_type, threads, optimiser, learning_rate,
+def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, learning_rate,
           momentum, weight_decay, initial_rho, adaptive, rho_scheduler, k, epochs):
     """ Sets up the training process. """
     dataset = CIFAR(source_dataset, batch_size, label_type, threads)
 
     model = resnet.resnet32().to(device)
 
-    if optimiser == "SAM":
+    if optimiser_choice == "SAM":
         base_optimiser = torch.optim.SGD
         optimiser = SAM(model.parameters(),
-                        base_optimiser,
-                        rho=initial_rho,
-                        adaptive=adaptive,
-                        lr=learning_rate,
-                        momentum=momentum,
-                        weight_decay=weight_decay)
+                               base_optimiser,
+                               rho=initial_rho,
+                               adaptive=adaptive,
+                               lr=learning_rate,
+                               momentum=momentum,
+                               weight_decay=weight_decay)
     else:
         optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
@@ -239,7 +239,7 @@ if __name__ == '__main__':
     parser.add_argument("--noise_level", default=0.2, type=float,
                         help="When label type is 'blue', each label is flipped with probability equal to this "
                              "parameter.")
-    parser.add_argument("--optimiser", default="SAM", type=str, help="Select from SAM or SGD.")
+    parser.add_argument("--optimiser-choice", default="SAM", type=str, help="Select from SAM or SGD.")
     parser.add_argument("--rho_scheduler", default="constant", type=str,
                         help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease")
     parser.add_argument("--threads", default=2, type=int, help="Number of CPU threads for dataloaders.")
@@ -247,12 +247,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     training_params = setup(args.dataset, args.batch_size, args.label_type, args.threads,  # Dataset arguments.
-                            args.optimiser, args.learning_rate, args.momentum, args.weight_decay,  # Optimiser.
+                            args.optimiser_choice, args.learning_rate, args.momentum, args.weight_decay,  # Optimiser.
                             args.initial_rho, args.adaptive, args.rho_scheduler, args.k,  # SAM-specific arguments.
                             args.epochs)  # Training arguments.
 
     # Run the training loop.
-    if args.optimiser == "SAM":
+    if args.optimiser_choice == "SAM":
         train_sam(*training_params, args.epochs, args.label_smoothing, args.bootstrapped)
     else:
         train_sgd(*training_params, args.epochs, args.label_smoothing, args.bootstrapped)
