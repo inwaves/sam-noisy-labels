@@ -68,7 +68,6 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
 
             enable_running_stats(model)
             predictions = model(inputs)
-            print(f"Predictions: {predictions}, targets: {targets}")
             loss = smooth_crossentropy(predictions, targets, label_smoothing)
             loss.mean().backward()
             optimiser.step()
@@ -119,7 +118,6 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
             enable_running_stats(model)
             predictions = model(inputs)
             loss = smooth_crossentropy(predictions, targets, smoothing=label_smoothing)
-            print(f"Loss: {loss}, loss_mean: {loss.mean()}")
             loss.mean().backward()
             optimiser.first_step(zero_grad=True)
 
