@@ -5,29 +5,28 @@ import torchvision.transforms as transforms
 from torch.utils.data import DataLoader
 
 
-def apply_label_noise(labels, noise_level, num_classes):
-    """Applies label noise to the clean labels.
+def apply_label_noise(labels, noise, num_classes):
+    """Applies label noise to the clean labels in the proportion specified in :param noise_level.
     This implementation is due to Chiyuan Zhang, see:
     https://github.com/pluskid/fitting-random-labels/blob/master/cifar10_data.py.
     """
     np.random.seed(1996)
-    flip_label = np.random.rand(len(labels)) <= noise_level
+    flip_label = np.random.rand(len(labels)) <= noise
     random_labels = np.random.choice(num_classes, flip_label.sum())
 
     # For the labels where flip_label is True, replace the labels with random_labels.
     labels[flip_label] = random_labels
-
     return labels
 
 
-def get_cifar100(label_type, noise_level, data_transforms):
+def get_cifar100(label_type, noise, data_transforms):
     """Gets the CIFAR-100 dataset with the labels selected by the user."""
 
     if label_type != "blue":
         labels = torch.load("./data/CIFAR-100_human.pt")[f"{label_type}_label"]
     else:
         labels = apply_label_noise(labels=torch.load("./data/CIFAR-100_human.pt")["clean_label"],
-                                   noise_level=noise_level,
+                                   noise=noise,
                                    num_classes=100)
     train_set = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=data_transforms)
     test_set = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=data_transforms)
@@ -49,14 +48,18 @@ def get_cifar100(label_type, noise_level, data_transforms):
     return labels, train_set, test_set, classes
 
 
-def get_cifar10(label_type, noise_level, data_transforms):
-    """Gets the CIFAR-10 dataset with the labels selected by the user."""
+def get_cifar10(label_type, noise, data_transforms):
+    """Gets the CIFAR-10 dataset with the labels selected by the user.
+    There are two types of noise: red and blue, corresponding to "natural" and "synthetic" noise.
+    Red noise has 2 levels: aggregate and worse. Blue has any value [0, 1].
+    """
 
     if label_type != "blue":
+        # Load whichever type of red noise labels the user specified: clean, aggre, worse.
         labels = torch.load("./data/CIFAR-10_human.pt")[f"{label_type}_label"]
     else:
-        labels = apply_label_noise(labels=torch.load("./data/CIFAR-100_human.pt")["clean_label"],
-                                   noise_level=noise_level,
+        labels = apply_label_noise(labels=torch.load("./data/CIFAR-10_human.pt")["clean_label"],
+                                   noise=noise,
                                    num_classes=10)
 
     train_set = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=data_transforms)
@@ -67,17 +70,15 @@ def get_cifar10(label_type, noise_level, data_transforms):
 
 
 class CIFAR:
-    def __init__(self, which_dataset="cifar10", batch_size=128, label_type="clean", noise_level=0.0, threads=0):
+    def __init__(self, which_dataset="cifar10", batch_size=128, label_type="clean", noise=0.0, threads=0):
         data_transforms = transforms.Compose(
             [transforms.ToTensor(),
              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
-        # Get the labels to use for this particular experiment.
-        # "Worst" labels are 40% noise, aggregate labels are 20%.
         if which_dataset == "cifar10":
-            labels, train_set, test_set, classes = get_cifar10(label_type, noise_level, data_transforms)
+            labels, train_set, test_set, classes = get_cifar10(label_type, noise, data_transforms)
         else:
-            labels, train_set, test_set, classes = get_cifar100(label_type, noise_level, data_transforms)
+            labels, train_set, test_set, classes = get_cifar100(label_type, noise, data_transforms)
 
         # Replace the labels in the training set
         # with the labels from the labels array.
@@ -86,6 +87,6 @@ class CIFAR:
         for i in range(len(train_set)):
             new_training_set.append((train_set[i][0], labels[i]))
 
-        self.train = torch.utils.data.DataLoader(train_set, batch_size=batch_size, shuffle=True, num_workers=threads)
+        self.train = torch.utils.data.DataLoader(new_training_set, batch_size=batch_size, shuffle=True, num_workers=threads)
         self.test = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=threads)
         self.classes = classes

@@ -1,4 +1,3 @@
-import argparse
 import sys
 import torch
 
@@ -11,46 +10,50 @@ from utility.bypass_bn import enable_running_stats, disable_running_stats
 from optimiser.sam import SAM
 from data.cifar import CIFAR
 import models.resnet as resnet
+from utility.utils import parse_args
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 sys.path.append("..")
 
 
-def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, learning_rate,
-          momentum, weight_decay, initial_rho, adaptive, rho_scheduler, k, epochs):
+def setup(source_dataset, noise, batch_size, label_type, threads, optimiser_choice, learning_rate,
+          momentum, weight_decay, initial_rho, adaptive, rho_schedule_type, k, epochs):
     """ Sets up the training process. """
-    dataset = CIFAR(source_dataset, batch_size, label_type, threads)
+    dataset = CIFAR(source_dataset, batch_size, label_type, noise, threads)
 
-    model = resnet.resnet32().to(device)
+    model = resnet.resnet32().to(device) if source_dataset == "cifar10" \
+        else resnet.ResNet(resnet.BasicBlock, [5, 5, 5], 100).to(device)
 
     if optimiser_choice == "SAM":
         base_optimiser = torch.optim.SGD
         optimiser = SAM(model.parameters(),
-                               base_optimiser,
-                               rho=initial_rho,
-                               adaptive=adaptive,
-                               lr=learning_rate,
-                               momentum=momentum,
-                               weight_decay=weight_decay)
+                        base_optimiser,
+                        rho=initial_rho,
+                        adaptive=adaptive,
+                        lr=learning_rate,
+                        momentum=momentum,
+                        weight_decay=weight_decay)
     else:
         optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
-    f = open("log.txt", "w")
+    experiment_filename = f"./output/{source_dataset}_{label_type}_{str(noise).replace('.', 'p')}_" \
+                          f"{optimiser_choice}_{adaptive}_{str(initial_rho).replace('.', 'p')}"
+    f = open(f"{experiment_filename}.txt", "a+")
     log = Log(log_each=10, file_writer=f)
 
     # Schedulers.
     scheduler = StepLR(optimiser, learning_rate, epochs)  # Learning rate scheduler.
 
-    if rho_scheduler == "exponential":
-        nb_scheduler = ExponentialDecayNeighbourhoodSchedule(initial_rho, epochs, k, optimiser)
-    elif rho_scheduler == "stepdecay":
-        nb_scheduler = StepDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
-    elif rho_scheduler == "stepincrease":
-        nb_scheduler = StepIncreaseNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+    if rho_schedule_type == "exponential":
+        rho_schedule = ExponentialDecayNeighbourhoodSchedule(initial_rho, epochs, k, optimiser)
+    elif rho_schedule_type == "stepdecay":
+        rho_schedule = StepDecayNeighbourhoodSchedule(initial_rho, epochs, optimiser)
+    elif rho_schedule_type == "stepincrease":
+        rho_schedule = StepIncreaseNeighbourhoodSchedule(initial_rho, epochs, optimiser)
     else:
-        nb_scheduler = ConstantNeighbourhoodSchedule(initial_rho, optimiser)
+        rho_schedule = ConstantNeighbourhoodSchedule(initial_rho, optimiser)
 
-    return dataset, model, optimiser, log, scheduler, nb_scheduler
+    return dataset, model, optimiser, log, scheduler, rho_schedule
 
 
 def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, label_smoothing, bootstrapped):
@@ -81,7 +84,6 @@ def train_sgd(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
             enable_running_stats(model)
             predictions = model(inputs)
             loss = smooth_crossentropy(predictions, targets, label_smoothing)
-
             loss.mean().backward()
             optimiser.step()
             optimiser.zero_grad()
@@ -217,36 +219,10 @@ def train_swa():
 
 
 if __name__ == '__main__':
-    # Start by parsing CLI arguments.
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--adaptive", default=False, type=bool, help="True if you want to use the Adaptive SAM.")
-    parser.add_argument("--batch_size", default=128, type=int,
-                        help="Batch size used in the training and validation loop.")
-    parser.add_argument("--bootstrapped", default=False, type=bool,
-                        help="Run bootstrapped training: train once on the original labels, then again on the "
-                             "predicted labels from the first run.")
-    parser.add_argument("--dataset", default="cifar10", type=str, help="Select from cifar10 or cifar100.")
-    parser.add_argument("--epochs", default=200, type=int, help="Total number of epochs.")
-    parser.add_argument("--initial_rho", default=0.5, type=float, help="Rho parameter for SAM.")
-    parser.add_argument("--k", default=0.1, type=float,
-                        help="Parameter for the exponential decay schedule for ρ.")
-    parser.add_argument("--label_smoothing", default=0.1, type=float, help="Use 0.0 for no label smoothing.")
-    parser.add_argument("--label_type", default="clean", type=str, help="Type of CIFAR labels to use: clean, aggregate,"
-                                                                        " or worse.")
-    parser.add_argument("--learning_rate", default=0.1, type=float,
-                        help="Base learning rate at the start of the training.")
-    parser.add_argument("--momentum", default=0.9, type=float, help="SGD Momentum.")
-    parser.add_argument("--noise_level", default=0.2, type=float,
-                        help="When label type is 'blue', each label is flipped with probability equal to this "
-                             "parameter.")
-    parser.add_argument("--optimiser-choice", default="SAM", type=str, help="Select from SAM or SGD.")
-    parser.add_argument("--rho_scheduler", default="constant", type=str,
-                        help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease")
-    parser.add_argument("--threads", default=2, type=int, help="Number of CPU threads for dataloaders.")
-    parser.add_argument("--weight_decay", default=0.0005, type=float, help="L2 weight decay.")
-    args = parser.parse_args()
+    args = parse_args()
 
-    training_params = setup(args.dataset, args.batch_size, args.label_type, args.threads,  # Dataset arguments.
+    training_params = setup(args.dataset, args.noise, args.batch_size, args.label_type, args.threads,
+                            # Dataset arguments.
                             args.optimiser_choice, args.learning_rate, args.momentum, args.weight_decay,  # Optimiser.
                             args.initial_rho, args.adaptive, args.rho_scheduler, args.k,  # SAM-specific arguments.
                             args.epochs)  # Training arguments.
