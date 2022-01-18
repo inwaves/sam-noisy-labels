@@ -11,12 +11,13 @@ def apply_label_noise(labels, noise, num_classes):
     https://github.com/pluskid/fitting-random-labels/blob/master/cifar10_data.py.
     """
     np.random.seed(1996)
+    print(f"Initial labels: {labels} length: {len(labels)} shape: {labels.shape}")
     flip_label = np.random.rand(len(labels)) <= noise
     random_labels = np.random.choice(num_classes, flip_label.sum())
 
     # For the labels where flip_label is True, replace the labels with random_labels.
     labels[flip_label] = random_labels
-    print(f"Flipped labels: {labels}")
+    print(f"Flipped labels: {labels} length: {len(labels)} shape: {labels.shape}")
     return labels
 
 
