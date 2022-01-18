@@ -36,7 +36,8 @@ def setup(source_dataset, noise, batch_size, label_type, threads, optimiser_choi
     else:
         optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
-    experiment_filename = f"{source_dataset}_{label_type}_{noise}_{optimiser_choice}_{adaptive}_{initial_rho}"
+    experiment_filename = f"{source_dataset}_{label_type}_{str(noise).replace('.', 'p')}_" \
+                          f"{optimiser_choice}_{adaptive}_{str(initial_rho).replace('.', 'p')}"
     f = open(f"{experiment_filename}.txt", "a+")
     log = Log(log_each=10, file_writer=f)
 
