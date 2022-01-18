@@ -1,4 +1,3 @@
-import argparse
 import sys
 import torch
 
@@ -11,17 +10,19 @@ from utility.bypass_bn import enable_running_stats, disable_running_stats
 from optimiser.sam import SAM
 from data.cifar import CIFAR
 import models.resnet as resnet
+from utility.utils import parse_args
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 sys.path.append("..")
 
 
-def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, learning_rate,
+def setup(source_dataset, noise, batch_size, label_type, threads, optimiser_choice, learning_rate,
           momentum, weight_decay, initial_rho, adaptive, rho_scheduler, epochs):
     """ Sets up the training process. """
-    dataset = CIFAR(source_dataset, batch_size, label_type, threads)
+    dataset = CIFAR(source_dataset, batch_size, label_type, noise, threads)
 
-    model = resnet.resnet32().to(device)
+    model = resnet.resnet32().to(device) if source_dataset == "cifar10" \
+        else resnet.ResNet(resnet.BasicBlock, [5, 5, 5], 100).to(device)
 
     if optimiser_choice == "SAM":
         base_optimiser = torch.optim.SGD
@@ -35,7 +36,8 @@ def setup(source_dataset, batch_size, label_type, threads, optimiser_choice, lea
     else:
         optimiser = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
 
-    f = open("log.txt", "w")
+    experiment_filename = f"{source_dataset}_{label_type}_{noise}_{optimiser_choice}_{adaptive}_{initial_rho}"
+    f = open(f"{experiment_filename}.txt", "a+")
     log = Log(log_each=10, file_writer=f)
 
     # Schedulers.
@@ -156,28 +158,10 @@ def train_sam(dataset, model, optimiser, log, scheduler, nb_scheduler, epochs, l
 
 
 if __name__ == '__main__':
-    # Start by parsing CLI arguments.
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--adaptive", default=False, type=bool, help="True if you want to use the Adaptive SAM.")
-    parser.add_argument("--batch_size", default=128, type=int,
-                        help="Batch size used in the training and validation loop.")
-    parser.add_argument("--dataset", default="cifar10", type=str, help="Select from cifar10 or cifar100.")
-    parser.add_argument("--epochs", default=10, type=int, help="Total number of epochs.")
-    parser.add_argument("--initial_rho", default=0.5, type=float, help="Rho parameter for SAM.")
-    parser.add_argument("--rho_scheduler", default=0.5, type=float,
-                        help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease")
-    parser.add_argument("--label_smoothing", default=0.1, type=float, help="Use 0.0 for no label smoothing.")
-    parser.add_argument("--label_type", default="clean", type=str, help="Type of CIFAR labels to use: clean, aggregate,"
-                                                                        " or worse.")
-    parser.add_argument("--learning_rate", default=0.1, type=float,
-                        help="Base learning rate at the start of the training.")
-    parser.add_argument("--momentum", default=0.9, type=float, help="SGD Momentum.")
-    parser.add_argument("--optimiser-choice", default="SAM", type=str, help="Select from SAM or SGD.")
-    parser.add_argument("--threads", default=2, type=int, help="Number of CPU threads for dataloaders.")
-    parser.add_argument("--weight_decay", default=0.0005, type=float, help="L2 weight decay.")
-    args = parser.parse_args()
+    args = parse_args()
 
-    training_params = setup(args.dataset, args.batch_size, args.label_type, args.threads,  # Dataset arguments.
+    training_params = setup(args.dataset, args.noise, args.batch_size, args.label_type, args.threads,
+                            # Dataset arguments.
                             args.optimiser_choice, args.learning_rate, args.momentum, args.weight_decay,  # Optimiser.
                             args.initial_rho, args.adaptive, args.rho_scheduler,  # SAM-specific arguments.
                             args.epochs)  # Training arguments.
