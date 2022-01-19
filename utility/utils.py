@@ -23,6 +23,7 @@ def parse_args():
     parser.add_argument("--dataset", default="cifar10", type=str, help="Select from cifar10 or cifar100.")
     parser.add_argument("--epochs", default=10, type=int, help="Total number of epochs.")
     parser.add_argument("--initial_rho", default=0.5, type=float, help="Rho parameter for SAM.")
+    parser.add_argument("--k", default=0.1, type=float, help="Parameter for exponential decay.")
     parser.add_argument("--rho_scheduler", default="constant", type=str,
                         help="Neighbourhood size scheduler type: exponential, stepdecay, stepincrease, constant.")
     parser.add_argument("--label_smoothing", default=0.1, type=float, help="Use 0.0 for no label smoothing.")
