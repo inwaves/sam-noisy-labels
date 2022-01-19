@@ -20,6 +20,8 @@ def parse_args():
     parser.add_argument("--adaptive", default=False, type=bool, help="True if you want to use the Adaptive SAM.")
     parser.add_argument("--batch_size", default=128, type=int,
                         help="Batch size used in the training and validation loop.")
+    parser.add_argument("--bootstrapped", default=False, type=bool,
+                        help="Determines whether to run the bootstrapped version of the algorithm.")
     parser.add_argument("--dataset", default="cifar10", type=str, help="Select from cifar10 or cifar100.")
     parser.add_argument("--epochs", default=10, type=int, help="Total number of epochs.")
     parser.add_argument("--initial_rho", default=0.5, type=float, help="Rho parameter for SAM.")
